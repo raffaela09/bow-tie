@@ -119,6 +119,7 @@
     return {
       id: null,
       nome: "Diagrama sem título",
+      status: "em_progresso",
       pan: { x: 60, y: 60 },
       zoom: 1,
       nos: nos
@@ -132,7 +133,12 @@
   var mundoEl, outerEl, canvasEl;
 
   function estadoParaPacote() {
-    return { id: estado.id, nome: estado.nome, dados: { pan: estado.pan, zoom: estado.zoom, nos: estado.nos } };
+    return {
+      id: estado.id,
+      nome: estado.nome,
+      status: estado.status,
+      dados: { pan: estado.pan, zoom: estado.zoom, nos: estado.nos }
+    };
   }
 
   // ---------- Histórico (desfazer/refazer) — só cobre a lista de nós ----------
@@ -1431,6 +1437,7 @@
       .then(function (corpo) {
         estado.id = corpo.id;
         estado.nome = corpo.nome;
+        estado.status = corpo.status || "em_progresso";
         estado.pan = corpo.dados.pan || { x: 60, y: 60 };
         estado.zoom = typeof corpo.dados.zoom === "number" ? corpo.dados.zoom : 1;
         estado.nos = corpo.dados.nos || [];
@@ -1438,6 +1445,7 @@
         pilhaRefazer = [];
         sujo = false;
         document.getElementById("inputNomeDiagrama").value = estado.nome;
+        document.getElementById("selectStatusDiagrama").value = estado.status;
         render();
         atualizarBotoesHistorico();
         requestAnimationFrame(ajustarVisualizacao);
@@ -1447,6 +1455,24 @@
       .catch(function (erro) {
         mostrarNotificacao("Falha ao carregar diagrama: " + erro.message, "erro");
         throw erro;
+      });
+  }
+
+  function atualizarStatusNoServidor(status) {
+    // Se o diagrama ainda não foi salvo (sem id), o status só existe em
+    // memória por enquanto — será enviado no próximo salvamento completo.
+    if (!estado.id) return;
+    fetch("/api/diagrama/" + encodeURIComponent(estado.id) + "/status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: status })
+    })
+      .then(function (resposta) {
+        if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+        mostrarNotificacao("Status atualizado para: " + (status === "concluido" ? "Concluído" : "Em progresso"), "sucesso");
+      })
+      .catch(function (erro) {
+        mostrarNotificacao("Falha ao atualizar status: " + erro.message, "erro");
       });
   }
 
@@ -1492,6 +1518,12 @@
     document.getElementById("inputNomeDiagrama").addEventListener("input", function (e) {
       estado.nome = e.target.value;
       sujo = true;
+    });
+
+    document.getElementById("selectStatusDiagrama").addEventListener("change", function (e) {
+      estado.status = e.target.value;
+      sujo = true;
+      atualizarStatusNoServidor(estado.status);
     });
 
     document.getElementById("btnSalvar").addEventListener("click", function () { salvarNoServidor(true); });

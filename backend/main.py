@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from database import inicializar_banco, listar_diagramas, obter_diagrama, salvar_diagrama
+from database import inicializar_banco, listar_diagramas, obter_diagrama, salvar_diagrama, atualizar_status_diagrama
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
@@ -24,6 +24,11 @@ class DiagramaPayload(BaseModel):
     id: Optional[str] = None
     nome: str = "Diagrama sem título"
     dados: Dict[str, Any]
+    status: str = "em_progresso"
+
+
+class StatusPayload(BaseModel):
+    status: str
 
 
 @app.get("/")
@@ -34,8 +39,18 @@ def servir_frontend():
 @app.post("/api/diagrama/salvar")
 def salvar(payload: DiagramaPayload):
     dados_json = json.dumps(payload.dados, ensure_ascii=False)
-    id_resultante = salvar_diagrama(payload.id, payload.nome, dados_json)
-    return {"id": id_resultante, "status": "salvo"}
+    id_resultante = salvar_diagrama(payload.id, payload.nome, dados_json, payload.status)
+    return {"id": id_resultante, "status": payload.status}
+
+
+@app.patch("/api/diagrama/{id_diagrama}/status")
+def alterar_status(id_diagrama: str, payload: StatusPayload):
+    if payload.status not in ("em_progresso", "concluido"):
+        raise HTTPException(status_code=400, detail="Status inválido")
+    sucesso = atualizar_status_diagrama(id_diagrama, payload.status)
+    if not sucesso:
+        raise HTTPException(status_code=404, detail="Diagrama não encontrado")
+    return {"id": id_diagrama, "status": payload.status}
 
 
 @app.get("/api/diagrama/{id_diagrama}")
@@ -47,9 +62,9 @@ def obter(id_diagrama: str):
         "id": registro["id"],
         "nome": registro["nome"],
         "dados": json.loads(registro["dados_json"]),
+        "status": registro["status"],
         "atualizado_em": registro["atualizado_em"],
     }
-
 
 @app.get("/api/diagrama")
 def listar(

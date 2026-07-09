@@ -24,29 +24,37 @@ def inicializar_banco():
             id TEXT PRIMARY KEY,
             nome TEXT NOT NULL,
             dados_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'em_progresso',
             atualizado_em TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime'))
         )
         """
     )
+    # Migração: se o banco já existia sem a coluna 'status', adiciona agora.
+    colunas = [linha["name"] for linha in conexao.execute("PRAGMA table_info(diagramas)")]
+    if "status" not in colunas:
+        conexao.execute(
+            "ALTER TABLE diagramas ADD COLUMN status TEXT NOT NULL DEFAULT 'em_progresso'"
+        )
     conexao.commit()
     conexao.close()
 
 
-def salvar_diagrama(id_diagrama, nome, dados_json):
+def salvar_diagrama(id_diagrama, nome, dados_json, status="em_progresso"):
     """Insere um novo diagrama ou atualiza um existente (UPSERT por id)."""
     conexao = obter_conexao()
     try:
         id_resultante = id_diagrama or str(uuid.uuid4())
         conexao.execute(
             """
-            INSERT INTO diagramas (id, nome, dados_json, atualizado_em)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO diagramas (id, nome, dados_json, status, atualizado_em)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(id) DO UPDATE SET
                 nome = excluded.nome,
                 dados_json = excluded.dados_json,
+                status = excluded.status,
                 atualizado_em = datetime('now', 'localtime')
             """,
-            (id_resultante, nome, dados_json),
+            (id_resultante, nome, dados_json, status),
         )
         conexao.commit()
         return id_resultante
@@ -54,11 +62,25 @@ def salvar_diagrama(id_diagrama, nome, dados_json):
         conexao.close()
 
 
+def atualizar_status_diagrama(id_diagrama, status):
+    """Atualiza apenas o status de um diagrama já existente."""
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.execute(
+            "UPDATE diagramas SET status = ?, atualizado_em = datetime('now', 'localtime') WHERE id = ?",
+            (status, id_diagrama),
+        )
+        conexao.commit()
+        return cursor.rowcount > 0
+    finally:
+        conexao.close()
+        
+        
 def obter_diagrama(id_diagrama):
     conexao = obter_conexao()
     try:
         linha = conexao.execute(
-            "SELECT id, nome, dados_json, atualizado_em FROM diagramas WHERE id = ?",
+            "SELECT id, nome, dados_json, status, atualizado_em FROM diagramas WHERE id = ?",
             (id_diagrama,),
         ).fetchone()
         return dict(linha) if linha else None

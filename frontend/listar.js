@@ -30,7 +30,7 @@ function renderizarTabela(lista){
         line.innerHTML = `
             <td class="items">${diagram.nome}</td>
             <td class="items">${diagram.atualizado_em}</td>
-            <td class="items">Em progresso</td>
+            <td class="items">${diagram.status}</td>
             <td>
                 <button onclick="editarDiagrama('${diagram.id}')" class="btnEditar">
                     <i class="fa-solid fa-pencil"></i>
