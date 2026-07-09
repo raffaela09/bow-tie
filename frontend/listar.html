@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="listar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Diagramas</title>
+</head>
+<body>
+    <div class="title">
+        <h1>Diagramas salvos:</h1>
+    </div>
+
+    <div class="box-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input placeholder="Buscar diagrama..." class="input-box" id="searchFile">
+    </div>
+
+    <div class="box-table">
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Data</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="corpoTabela">
+                <tr>
+                    <td colspan="3" class="items">Carregando lista...</td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+    <div id="paginacao"></div>
+
+    <script src="/listar.js"></script>
+</body>
+</html>

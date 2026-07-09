@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagrama Bow Tie — Análise de Riscos</title>
+  <link rel="stylesheet" href="/static/style.css">
+  </head>
+<body>
+<div class="bowtie-app">
+
+  <header class="topo">
+    <h1>Diagrama Bow Tie</h1>
+    <p class="subtitulo">Módulo de análise de riscos — baseado na ABNT NBR ISO/IEC 31010:2012, Anexo B.21</p>
+  </header>
+
+  <p class="instrucoes">
+    Arraste um elemento da barra lateral para o canvas para criá-lo. Duplo clique em qualquer bloco para editar
+    seus dados. Clique no "×" de um bloco para removê-lo instantaneamente. Arraste um bloco para movê-lo
+    livremente. Segure <kbd>Espaço</kbd> + clique (ou o botão do meio do mouse, ou uma área vazia) para navegar
+    pela tela. Role o mouse para percorrer o canvas; <kbd>Ctrl</kbd> + roda do mouse (ou pinça no trackpad) para
+    zoom no ponto do cursor.
+  </p>
+
+  <div class="toolbar" role="toolbar" aria-label="Ferramentas do diagrama Bow Tie">
+    <div class="toolbar-grupo">
+      <span class="toolbar-titulo">Visualização</span>
+      <button id="btnZoomOut" title="Diminuir zoom">− Zoom</button>
+      <button id="btnZoomIn" title="Aumentar zoom">+ Zoom</button>
+      <button id="btnAjustar" title="Ajustar tudo à tela">Ajustar</button>
+      <button id="btnReorganizar" title="Reorganizar blocos automaticamente">Reorganizar</button>
+    </div>
+
+    <div class="toolbar-grupo toolbar-grupo-nome">
+      <span class="toolbar-titulo">Nome</span>
+      <input type="text" id="inputNomeDiagrama" value="Diagrama sem título" placeholder="Nome do diagrama">
+    </div>
+    
+    <div class="toolbar-grupo">
+      <span class="toolbar-titulo">Listar</span>
+      <button id="btnListar" title="Listar todos os diagramas ja salvos" onclick="window.location.href='/listar.html'">Listar diagramas</button>
+    </div>
+
+    <div class="toolbar-grupo">
+      <span class="toolbar-titulo">Servidor</span>
+      <button id="btnSalvar" title="Salvar no banco de dados">Salvar</button>
+      <input type="text" id="inputIdCarregar" placeholder="ID do diagrama" class="input-id">
+      <button id="btnCarregar" title="Carregar diagrama pelo ID">Carregar</button>
+    </div>
+
+  </div>
+
+  <div class="area-trabalho">
+    <aside class="sidebar" aria-label="Elementos do diagrama">
+      <span class="sidebar-titulo">Elementos</span>
+      <div class="chip chip-evento" draggable="true" data-tipo-no="evento">
+        <i class="marcador cor-evento"></i>Evento Central
+      </div>
+      <div class="chip chip-causa" draggable="true" data-tipo-no="causa">
+        <i class="marcador cor-causa"></i>Causa
+      </div>
+      <div class="chip chip-barreira-preventiva" draggable="true" data-tipo-no="barreiraPreventiva">
+        <i class="marcador cor-barreira-preventiva"></i>Barreira Preventiva
+      </div>
+      <div class="chip chip-barreira-mitigadora" draggable="true" data-tipo-no="barreiraMitigadora">
+        <i class="marcador cor-barreira-mitigadora"></i>Barreira Mitigadora
+      </div>
+      <div class="chip chip-consequencia" draggable="true" data-tipo-no="consequencia">
+        <i class="marcador cor-consequencia"></i>Consequência
+      </div>
+      <div class="chip chip-degradacao" draggable="true" data-tipo-no="degradacao">
+        <i class="marcador cor-degradacao"></i>Fator de Degradação
+      </div>
+      <p class="sidebar-dica">Uma barreira preventiva solta é associada à causa mais próxima; uma barreira
+        mitigadora, à consequência mais próxima; um fator de degradação solto é associado à barreira mais próxima
+        (uma barreira pode ter vários fatores de degradação).</p>
+
+      <span class="sidebar-titulo">Portabilidade</span>
+      <button id="btnExportarJson" class="botao-sidebar">Exportar JSON</button>
+      <button id="btnImportarJson" class="botao-sidebar">Importar JSON</button>
+      <button id="btnExportarSvg" class="botao-sidebar">Exportar Imagem (SVG)</button>
+      <input type="file" id="inputArquivoJson" accept="application/json" hidden>
+
+      <span class="sidebar-titulo">Diagrama</span>
+      <button id="btnNovoDiagrama" class="botao-sidebar">Novo diagrama</button>
+    </aside>
+
+    <div class="bowtie-outer" id="outer">
+      <canvas id="linesCanvas"></canvas>
+      <div class="bowtie-world" id="world"></div>
+
+      <!-- Barra de ferramentas flutuante lateral (estilo Miro) — visual, ferramentas de desenho ainda não implementadas -->
+      <div class="ferramentas-flutuantes" id="ferramentasFlutuantes">
+        <div class="ferramentas-grupo ferramentas-grupo-principal">
+          <button type="button" class="ferramenta-btn ativo" data-ferramenta="selecao" title="Seleção">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l4.6 16.2 2.2-6.6 6.6-2.2L5 3z" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ferramenta-btn" data-ferramenta="texto" title="Texto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 5h14M12 5v14"/>
+            </svg>
+          </button>
+          <button type="button" class="ferramenta-btn" data-ferramenta="caneta" title="Caneta / desenho livre">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 20l1-4.5L15.5 5 19 8.5 8.5 19 4 20z"/>
+              <path d="M13 7l4 4"/>
+            </svg>
+          </button>
+          <button type="button" class="ferramenta-btn" data-ferramenta="comentarios" title="Comentários">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 5h16v11H9l-4 3.5V16H4z"/>
+              <path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>
+            </svg>
+          </button>
+          <button type="button" class="ferramenta-btn" id="btnTelaCheia" title="Tela cheia (F11 ou Ctrl+F)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 3v4M3 7h4M17 3v4M21 7h-4M7 21v-4M3 17h4M17 21v-4M21 17h-4"/>
+            </svg>
+          </button>
+          <div class="ferramenta-separador"></div>
+          <button type="button" class="ferramenta-btn" id="btnMaisFerramentas" title="Mais ferramentas (em desenvolvimento)"
+            aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3.5" y="3.5" width="17" height="17" rx="4"/>
+              <path d="M12 8v8M8 12h8"/>
+            </svg>
+          </button>
+
+          <div class="ferramentas-popover" id="popoverMaisFerramentas" hidden>
+            <span class="ferramentas-popover-titulo">Mais ferramentas</span>
+            <p class="ferramentas-popover-subtitulo">Espaço reservado para futuras ferramentas — ainda em desenvolvimento.</p>
+            <ul class="ferramentas-popover-lista" id="listaMaisFerramentas"></ul>
+          </div>
+        </div>
+
+        <div class="ferramentas-grupo ferramentas-grupo-acoes">
+          <button type="button" class="ferramenta-btn" id="btnCompartilharImagem" title="Compartilhar imagem do diagrama">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v12M8 7l4-4 4 4"/>
+              <path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+            </svg>
+          </button>
+          <button type="button" class="ferramenta-btn" id="btnDesfazerFlutuante" title="Desfazer (Ctrl+Z)">
+            <span class="ferramenta-icone-texto" aria-hidden="true">↺</span>
+          </button>
+          <button type="button" class="ferramenta-btn" id="btnRefazerFlutuante" title="Refazer (Ctrl+Y)">
+            <span class="ferramenta-icone-texto" aria-hidden="true">↻</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de ferramentas flutuante superior direita (estilo Miro) — puramente visual -->
+      <div class="barra-superior-direita" id="barraSuperiorDireita">
+        <!--<div class="bsd-item bsd-timer" title="Tempo restante da sessão">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="13" r="8"/>
+            <path d="M12 9v4l3 2"/>
+            <path d="M9 2h6M12 2v2"/>
+          </svg>
+          <span class="bsd-timer-texto">03:00</span>
+        </div>-->
+        <button type="button" class="bsd-icone-btn" id="btnAtividades" title="Atividades / Chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 5h16v10H10l-4 3.5V15H4z"/>
+          </svg>
+        </button>
+        <!--<button type="button" class="bsd-icone-btn" title="Vídeo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="6.5" width="13" height="11" rx="2"/>
+            <path d="M16 10.5l5-3v9l-5-3z"/>
+          </svg>
+        </button>-->
+        <div class="bsd-separador"></div>
+        <button type="button" class="bsd-btn bsd-btn-apresentar" id="btnApresentar">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>
+          Apresentar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legenda">
+    <span><i class="marcador cor-causa"></i>Causa / fonte de risco</span>
+    <span><i class="marcador cor-barreira-preventiva"></i>Barreira preventiva</span>
+    <span><i class="marcador cor-evento"></i>Evento central</span>
+    <span><i class="marcador cor-barreira-mitigadora"></i>Barreira mitigadora</span>
+    <span><i class="marcador cor-consequencia"></i>Consequência</span>
+    <span><i class="marcador cor-degradacao"></i>Fator de degradação</span>
+  </div>
+
+  <footer class="rodape">
+    <span class="rodape-norma">Técnica fundamentada na ABNT NBR ISO/IEC 31010:2012 — Anexo B.21 (Análise Bow Tie).</span>
+    <span class="rodape-status" id="rodapeStatus">Coordenadas: 0, 0 | Nível de zoom: 100%</span>
+  </footer>
+
+  <!-- Modal customizado de edição (HTML/CSS puro, sem <dialog> nativo) -->
+  <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+      <h3 id="modalTitulo">Editar bloco</h3>
+
+      <label class="modal-campo">
+        <span>Texto</span>
+        <input type="text" id="modalInputTexto" autocomplete="off">
+      </label>
+
+      <label class="modal-campo" id="modalCampoEficacia" hidden>
+        <span>Eficácia do controle (0.0 a 1.0)</span>
+        <input type="number" id="modalInputEficacia" min="0" max="1" step="0.05">
+      </label>
+
+      <div class="modal-botoes">
+        <button type="button" id="modalBtnCancelar">Cancelar</button>
+        <button type="button" id="modalBtnSalvar">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de exportar/importar JSON (visualizar, copiar, colar, baixar, escolher arquivo) -->
+  <div class="modal-overlay" id="modalJsonOverlay" hidden>
+    <div class="modal-caixa modal-caixa-larga" role="dialog" aria-modal="true" aria-labelledby="modalJsonTitulo">
+      <h3 id="modalJsonTitulo">Exportar JSON</h3>
+      <p class="modal-json-dica" id="modalJsonDica">JSON completo do diagrama atual.</p>
+
+      <textarea id="modalJsonTexto" class="modal-json-textarea" spellcheck="false"
+        placeholder="Cole aqui o conteúdo de um arquivo .json exportado anteriormente..."></textarea>
+
+      <div class="modal-botoes modal-botoes-json">
+        <button type="button" id="modalJsonBtnEscolherArquivo" hidden>Escolher arquivo...</button>
+        <button type="button" id="modalJsonBtnCopiar" hidden>Copiar</button>
+        <span class="modal-botoes-espaco"></span>
+        <button type="button" id="modalJsonBtnFechar">Fechar</button>
+        <button type="button" id="modalJsonBtnImportar" hidden>Importar</button>
+        <button type="button" id="modalJsonBtnBaixar" hidden>Baixar arquivo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de comentário (criar / visualizar mensagem de um pino de comentário) -->
+  <div class="modal-overlay" id="modalComentarioOverlay" hidden>
+    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modalComentarioTitulo">
+      <h3 id="modalComentarioTitulo">Novo comentário</h3>
+
+      <label class="modal-campo">
+        <span>Mensagem</span>
+        <textarea id="modalComentarioTexto" class="modal-comentario-textarea" rows="4" autofocus></textarea>
+      </label>
+
+      <div class="modal-botoes">
+        <button type="button" id="modalComentarioBtnCancelar">Cancelar</button>
+        <button type="button" id="modalComentarioBtnSalvar">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel lateral de atividades (lista de comentários) -->
+  <div class="painel-atividades" id="painelAtividades" hidden>
+    <div class="painel-atividades-cabecalho">
+      <span>Atividades</span>
+      <button type="button" id="btnFecharAtividades" title="Fechar" aria-label="Fechar">×</button>
+    </div>
+    <div class="painel-atividades-lista" id="listaAtividades"></div>
+  </div>
+
+  <div class="toast-pilha" id="toastPilha" aria-live="polite"></div>
+
+</div>
+<script src="/static/script.js"></script>
+</body>
+</html>
