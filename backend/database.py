@@ -96,7 +96,7 @@ def listar_diagramas(pagina=1, limite=5):
 
         linhas = conexao.execute(
             """
-            SELECT id, nome, atualizado_em
+            SELECT id, nome, atualizado_em, status
             FROM diagramas
             ORDER BY atualizado_em DESC
             LIMIT ? OFFSET ?
